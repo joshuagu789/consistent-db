@@ -1,0 +1,35 @@
+# Compile into class
+javac -cp ./lib/cassandra-driver-core-3.0.1-shaded.jar:./lib/nio-1.2.1.jar src/client/Client.java src/server/SingleServer.java
+
+# run client
+java -cp ./lib/cassandra-driver-core-3.0.1-shaded.jar:./lib/nio-1.2.1.jar:./src/ src/client/Client.java 
+
+# run server
+java -cp ./lib/cassandra-driver-core-3.0.1-shaded.jar:./lib/nio-1.2.1.jar:./src/server/ src/server/SingleServer.java
+
+# testing 
+javac -cp "./src/:./lib/*" test/GraderSingleServer.java
+java -cp "./src/:./lib/*" test/GraderSingleServer.java
+
+javac -cp "./src/:./lib/*:./test/" test/GraderSingleServerGradescope.java
+java -cp "./src/:./lib/*:./test/" test/GraderSingleServerGradescope.java
+
+// Create cassandra
+docker pull cassandra:4.1.10
+docker network create cassandra
+docker run --rm -d --name cassandra --hostname cassandra -p 9042:9042 --network cassandra cassandra:4.1.10
+
+// load data with cqlsh
+docker run --rm --network cassandra \
+-v "$(pwd)/data.cql:/scripts/data.cql" \
+-e CQLSH_HOST=cassandra -e CQLSH_PORT=9042 \
+-e CQLVERSION=3.4.6 nuvo/docker-cqlsh
+
+// Connect to cql shell
+docker run --rm -it --network \
+cassandra nuvo/docker-cqlsh cqlsh cassandra \
+9042 --cqlversion='3.4.6'
+
+// cleanup
+docker kill cassandra
+docker network rm cassandra
