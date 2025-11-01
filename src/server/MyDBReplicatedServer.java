@@ -125,6 +125,7 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
             // }
             // encoded as <command>|<callback_id>|<clientAddress>|<server_ID>|<server_lamport>
             final String message_key = message_parts[0] + message_parts[1] + message_parts[2] + message_parts[3] + message_parts[4];
+            log.log(Level.INFO, "message_parts len is {0}, message_key is {1}", new Object[]{message_parts.length, message_key});
 
             synchronized(this) {
                 long incoming_lamport_clock = Long.parseLong(message_parts[4]);
