@@ -87,22 +87,17 @@ public class MyDBClient extends Client {
     public void callbackSend(InetSocketAddress isa, String request, Callback
             callback) throws IOException {
 
-        if(callback != null) {
+        String payload;
 
-            String payload;
-
-            // this.callback_id is critical section
-            synchronized (this) {
+        // this.callback_id is critical section
+        synchronized (this) {
+            if(callback != null) {
                 this.callbacks.put(this.callback_id, callback);
-                payload = request + "|" + Long.toString(callback_id);   // append callback id with '|' delimiter
-                this.callback_id++;
             }
-            System.out.println("Sending callbacked string in callbackSend " + payload);
-            this.send(isa, payload);
+            payload = request + "|" + Long.toString(callback_id);   // append callback id with '|' delimiter
+            this.callback_id++;                                     // for convenience, always increment & send callback id even if no callback
         }
-        else {
-            // System.out.println("Sending string in callbackSend " + request);
-            this.send(isa, request);
-        }
+        System.out.println("Sending callbacked string in callbackSend " + payload);
+        this.send(isa, payload);
     }
 }

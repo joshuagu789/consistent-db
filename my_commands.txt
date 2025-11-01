@@ -1,5 +1,8 @@
 # Compile into class
 javac -cp ./lib/cassandra-driver-core-3.0.1-shaded.jar:./lib/nio-1.2.1.jar src/client/Client.java src/server/SingleServer.java
+javac -cp ./lib/cassandra-driver-core-3.0.1-shaded.jar:./lib/nio-1.2.1.jar src/client/Client.java src/server/MyDBReplicatedServer.java
+
+javac -cp "./src/:./lib/*" src/client/MyDBClient.java src/server/MyDBReplicatedServer.java
 
 # run client
 java -cp ./lib/cassandra-driver-core-3.0.1-shaded.jar:./lib/nio-1.2.1.jar:./src/ src/client/Client.java 
