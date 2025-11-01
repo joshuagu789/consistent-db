@@ -113,6 +113,7 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
         try {
             String message = new String(bytes, ReplicatedServer.DEFAULT_ENCODING);
             String[] message_parts = message.split("|");    // array len 6
+            log.log(Level.INFO, "{0} received relayed message from {1}, message is {2}, array is {3}", new Object[]{this.myID, header.sndr, message, message_parts});
 
             // encoded as <command>|<callback_id>|<clientAddress>|<server_ID>|<server_lamport>
             String message_key = message_parts[0] + message_parts[1] + message_parts[2] + message_parts[3] + message_parts[4];
@@ -123,10 +124,12 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
 
                 if(message_parts[5] == "ACK") {
                     this.messages_acks.put(message_key, this.messages_acks.get(message_key) + 1);
+                    log.log(Level.INFO, "{0} ACKS message {1}, its ack count is now {2}", new Object[]{this.myID, message, this.messages_acks.get(message_key)});
                 }
                 else if(message_parts[5] == "UPDATE") {
                     this.messages_acks.put(message_key, 1); // self ack
 
+                    log.log(Level.INFO, "{0} multicasts message {1}", new Object[]{this.myID, message});
                     String messageToBroadcast = message_key + "|ACK";
                     /* BEGIN MULTICAST */
                     // relay to other servers
@@ -156,10 +159,16 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                         this.queue.poll();  // remove message
                         this.messages_acks.remove(front_message);
 
+                        log.log(Level.INFO, "{0} delivers message {1}", new Object[]{this.myID, front_message});
+
                         // If this server is responsible for replying to client
                         if(this.client_headers.containsKey(front_message)) {
+
                             String response = front_message_parts[0] + "|" + front_message_parts[1];
-                            this.clientMessenger.send(header.sndr, response.getBytes(ReplicatedServer.DEFAULT_ENCODING));  // echo message
+                            NIOHeader client_header = this.client_headers.get(front_message);
+
+                            log.log(Level.INFO, "{0} sends message {1} to client {2}", new Object[]{this.myID, response, client_header.sndr});
+                            this.clientMessenger.send(client_header.sndr, response.getBytes(ReplicatedServer.DEFAULT_ENCODING));  // echo message
                         }
                     }
                     else {
