@@ -51,8 +51,8 @@ public class MyDBClient extends Client {
 
                     long id = Long.parseLong(response.substring(i+1));
                     String message = response.substring(0, i);
-                    System.out.println("| detected at index " + Integer.toString(i)
-                                        + " for message " + response + " and id " + Long.toString(id));
+                    // System.out.println("| detected at index " + Integer.toString(i)
+                    //                     + " for message " + response + " and id " + Long.toString(id));
 
                     synchronized (this) {
                         if(this.callbacks.containsKey(id)) {
@@ -97,7 +97,7 @@ public class MyDBClient extends Client {
             payload = request + "|" + Long.toString(callback_id);   // append callback id with '|' delimiter
             this.callback_id++;                                     // for convenience, always increment & send callback id even if no callback
         }
-        System.out.println("Sending callbacked string in callbackSend " + payload);
+        // System.out.println("Sending callbacked string in callbackSend " + payload);
         this.send(isa, payload);
     }
 }
