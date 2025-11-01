@@ -75,14 +75,20 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
         try {
             String request = new String(bytes, SingleServer.DEFAULT_ENCODING);  // encoded as <command>|<callback_id>
             String clientSource = this.clientMessenger.getListeningSocketAddress().toString();
+            String[] request_parts = request.split("|");
+
+            if(request_parts.length == 1) { // indicates no encoding of callback
+                request += "|-1";   // MyDBClient.java does not use negative id's, basically a dummy id, ensures all message encodings are consistent
+            }
 
             synchronized (this) {
                 // encoded as <command>|<callback_id>|<clientAddress>|<server_ID>|<server_lamport>|<"UPDATE"|"ACK">
                 // NOTE that hashmap messages_acks does not include <"UPDATE"|"ACK">
-                String messageToBroadcast = request + "|" + clientSource + "|" + this.myID + "|" + this.lamport_clock;
 
                 /* INSERT INTO DATA STRUCTURES */
                 this.lamport_clock++;
+                String messageToBroadcast = request + "|" + clientSource + "|" + this.myID + "|" + this.lamport_clock;
+
                 this.messages_acks.put(messageToBroadcast, 1);   // self ack
                 this.queue.add(messageToBroadcast);
                 this.client_headers.put(messageToBroadcast, header);
@@ -114,7 +120,9 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
             String message = new String(bytes, ReplicatedServer.DEFAULT_ENCODING);
             String[] message_parts = message.split("|");    // array len 6
             log.log(Level.INFO, "{0} received relayed message from {1}, message is {2}, array is {3}", new Object[]{this.myID, header.sndr, message, message_parts});
-
+            for(int i = 0; i < message_parts.length; i++) {
+                log.log(Level.INFO, "message at index {0} is {1}", new Object[]{i, message_parts[i]});
+            }
             // encoded as <command>|<callback_id>|<clientAddress>|<server_ID>|<server_lamport>
             String message_key = message_parts[0] + message_parts[1] + message_parts[2] + message_parts[3] + message_parts[4];
 
