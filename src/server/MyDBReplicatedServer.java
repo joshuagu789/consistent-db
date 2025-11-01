@@ -156,8 +156,8 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                 }
 
                 /* HANDLE MESSAGE DELIVERY */
-                // while (!this.queue.isEmpty()) {
-                if (!this.queue.isEmpty()) {
+                while (!this.queue.isEmpty()) {
+                // if (!this.queue.isEmpty()) {
 
                     String front_message = this.queue.peek();
                     int acks = this.messages_acks.get(front_message);
@@ -183,7 +183,7 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                         }
                     }
                     else {
-                        // break;
+                        break;
                     }
                 }
             }
