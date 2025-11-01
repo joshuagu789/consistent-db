@@ -120,11 +120,11 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
             String message = new String(bytes, ReplicatedServer.DEFAULT_ENCODING);
             String[] message_parts = message.split("\\|");    // array len 6
             log.log(Level.INFO, "{0} received relayed message from {1}, message is {2}, array is {3}", new Object[]{this.myID, header.sndr, message, message_parts});
-            for(int i = 0; i < message_parts.length; i++) {
-                log.log(Level.INFO, "message at index {0} is {1}", new Object[]{i, message_parts[i]});
-            }
+            // for(int i = 0; i < message_parts.length; i++) {
+            //     log.log(Level.INFO, "message at index {0} is {1}", new Object[]{i, message_parts[i]});
+            // }
             // encoded as <command>|<callback_id>|<clientAddress>|<server_ID>|<server_lamport>
-            String message_key = message_parts[0] + message_parts[1] + message_parts[2] + message_parts[3] + message_parts[4];
+            final String message_key = message_parts[0] + message_parts[1] + message_parts[2] + message_parts[3] + message_parts[4];
 
             synchronized(this) {
                 long incoming_lamport_clock = Long.parseLong(message_parts[4]);
@@ -137,8 +137,9 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                 else if(message_parts[5].equals("UPDATE")) {
                     this.messages_acks.put(message_key, 1); // self ack
 
-                    log.log(Level.INFO, "{0} multicasts message {1}", new Object[]{this.myID, message});
                     String messageToBroadcast = message_key + "|ACK";
+                    log.log(Level.INFO, "{0} multicasts message {1}", new Object[]{this.myID, messageToBroadcast});
+
                     /* BEGIN MULTICAST */
                     // relay to other servers
                     for (String node : this.serverMessenger.getNodeConfig().getNodeIDs())
