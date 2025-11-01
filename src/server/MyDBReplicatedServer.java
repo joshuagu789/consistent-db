@@ -130,11 +130,11 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                 long incoming_lamport_clock = Long.parseLong(message_parts[4]);
                 this.lamport_clock = Math.max(this.lamport_clock, incoming_lamport_clock) + 1;  // update LC
 
-                if(message_parts[5] == "ACK") {
+                if(message_parts[5].equals("ACK")) {
                     this.messages_acks.put(message_key, this.messages_acks.get(message_key) + 1);
                     log.log(Level.INFO, "{0} ACKS message {1}, its ack count is now {2}", new Object[]{this.myID, message, this.messages_acks.get(message_key)});
                 }
-                else if(message_parts[5] == "UPDATE") {
+                else if(message_parts[5].equals("UPDATE")) {
                     this.messages_acks.put(message_key, 1); // self ack
 
                     log.log(Level.INFO, "{0} multicasts message {1}", new Object[]{this.myID, message});
@@ -150,7 +150,7 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                             }
                 }
                 else {
-                    System.out.println("SOMETHING WRONG! ACK/UPDATE NOT PARSED");
+                    log.log(Level.INFO, "SOMETHING WRONG! ACK/UPDATE NOT PARSED");
                 }
 
                 /* HANDLE MESSAGE DELIVERY */
