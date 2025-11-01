@@ -26,8 +26,8 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
     // encoded as <command>|<callback_id>|<clientAddress>|<server_ID>|<server_lamport>
     private HashMap<String, Integer> messages_acks = new HashMap<String, Integer>(); 
     private PriorityQueue<String> queue = new PriorityQueue<>((s1, s2) -> {
-        String[] s1_parts = s1.split("|\\");
-        String[] s2_parts = s2.split("|\\");
+        String[] s1_parts = s1.split("\\|");
+        String[] s2_parts = s2.split("\\|");
 
         if(s1_parts[4] != s2_parts[4]) {
             return Long.compare(Long.parseLong(s1_parts[4]), Long.parseLong(s2_parts[4]));
@@ -75,7 +75,7 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
         try {
             String request = new String(bytes, SingleServer.DEFAULT_ENCODING);  // encoded as <command>|<callback_id>
             String clientSource = this.clientMessenger.getListeningSocketAddress().toString();
-            String[] request_parts = request.split("|\\");
+            String[] request_parts = request.split("\\|");
 
             if(request_parts.length == 1) { // indicates no encoding of callback
                 request += "|-1";   // MyDBClient.java does not use negative id's, basically a dummy id, ensures all message encodings are consistent
@@ -118,7 +118,7 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
 
         try {
             String message = new String(bytes, ReplicatedServer.DEFAULT_ENCODING);
-            String[] message_parts = message.split("|\\");    // array len 6
+            String[] message_parts = message.split("\\|");    // array len 6
             log.log(Level.INFO, "{0} received relayed message from {1}, message is {2}, array is {3}", new Object[]{this.myID, header.sndr, message, message_parts});
             for(int i = 0; i < message_parts.length; i++) {
                 log.log(Level.INFO, "message at index {0} is {1}", new Object[]{i, message_parts[i]});
@@ -160,7 +160,7 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                     int acks = this.messages_acks.get(front_message);
 
                     if(acks >= this.serverMessenger.getNodeConfig().getNodeIDs().size()) {  // Enough acks, lets goooo!!
-                        String[] front_message_parts = front_message.split("|\\");
+                        String[] front_message_parts = front_message.split("\\|");
                         
                         this.session.execute(front_message_parts[0]);   // deliver message
 
