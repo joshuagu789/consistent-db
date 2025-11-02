@@ -19,7 +19,6 @@ import java.util.LinkedList;
 public class MyDBReplicatedServer extends MyDBSingleServer {
 
     protected final String myID;
-    // protected final long myID_long;
     protected final MessageNIOTransport<String,String> serverMessenger;
 
     private long lamport_clock = 0;
@@ -47,17 +46,6 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                 nodeConfig.getNodePort(myID)-ReplicatedServer
                         .SERVER_PORT_OFFSET), isaDB, myID);
         this.myID = myID;
-
-        // long temp = 0;
-        // long multiplier = 1;
-        // for(char c: myID.toCharArray()) {
-        //     if(Character.isDigit(c)) {
-        //         temp = temp * multiplier;
-        //         temp += c - '0';
-        //         multiplier = multiplier * 10;
-        //     }
-        // }
-        // this.myID_long = temp;
 
         this.serverMessenger = new
                 MessageNIOTransport<String, String>(myID, nodeConfig,
@@ -166,27 +154,28 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                         this.messages_acks.put(message_key, 1);
                     }
 
-                    String contents = "";
-                    PriorityQueue<String> temp = new PriorityQueue<String>(this.queue);
-                    LinkedList<String> temp2 = new LinkedList<String>();
-                    while(!temp.isEmpty()){
-                        // contents += temp.poll() + "\n";
-                        temp2.add(temp.poll());
-                    }
-                    temp2.sort((s1, s2) -> {
-                        String[] s1_parts = s1.split("\\|");
-                        String[] s2_parts = s2.split("\\|");
+                    // String contents = "";
+                    // PriorityQueue<String> temp = new PriorityQueue<String>(this.queue);
+                    // LinkedList<String> temp2 = new LinkedList<String>();
+                    // while(!temp.isEmpty()){
+                    //     // contents += temp.poll() + "\n";
+                    //     temp2.add(temp.poll());
+                    // }
+                    // temp2.sort((s1, s2) -> {
+                    //     String[] s1_parts = s1.split("\\|");
+                    //     String[] s2_parts = s2.split("\\|");
 
-                        if(!s1_parts[4].equals(s2_parts[4])) {
-                            return Long.compare(Long.parseLong(s1_parts[4]), Long.parseLong(s2_parts[4]));
-                        }
-                        // return Long.compare(Long.parseLong(s1_parts[3]), Long.parseLong(s2_parts[3]));
-                        return s1_parts[3].compareTo(s2_parts[3]);
-                    });
-                    for(String s: temp2) {
-                        contents += s + "\n";
-                    }                    
-                    log.log(Level.INFO, "{0} ACKS message key {1}, its ack count is now {2}, the contents of queue is {3}", new Object[]{this.myID, message_key, this.messages_acks.get(message_key), contents});
+                    //     if(!s1_parts[4].equals(s2_parts[4])) {
+                    //         return Long.compare(Long.parseLong(s1_parts[4]), Long.parseLong(s2_parts[4]));
+                    //     }
+                    //     // return Long.compare(Long.parseLong(s1_parts[3]), Long.parseLong(s2_parts[3]));
+                    //     return s1_parts[3].compareTo(s2_parts[3]);
+                    // });
+                    // for(String s: temp2) {
+                    //     contents += s + "\n";
+                    // }                    
+                    // log.log(Level.INFO, "{0} ACKS message key {1}, its ack count is now {2}, the contents of queue is {3}", new Object[]{this.myID, message_key, this.messages_acks.get(message_key), contents});
+                    log.log(Level.INFO, "{0} ACKS message key {1}, its ack count is now {2}", new Object[]{this.myID, message_key, this.messages_acks.get(message_key)});
                 }
                 else if(message_parts[6].equals("UPDATE")) {
 
