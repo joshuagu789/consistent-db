@@ -53,13 +53,13 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                                 return true;
                             }
                         }, true);
-        log.log(Level.INFO, "Server {0} started on {1}", new Object[]{this
-                .myID, this.clientMessenger.getListeningSocketAddress()});
+        // log.log(Level.INFO, "Server {0} started on {1}", new Object[]{this
+        //         .myID, this.clientMessenger.getListeningSocketAddress()});
     }
 
     public void close() {
-        super.close();
         this.serverMessenger.stop();
+        super.close();
     }
 
     /**
@@ -79,6 +79,15 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
 
             if(request_parts.length == 1) { // indicates no encoding of callback
                 request += "|-1";   // MyDBClient.java does not use negative id's, basically a dummy id, ensures all message encodings are consistent
+            }
+
+            String[] cql = request_parts[0].split(" ");
+            if((!cql[0].equals("create") && !cql[0].equals("insert") && !cql[0].equals("update") && 
+                !cql[0].equals("drop") && !cql[0].equals("truncate")) || this.serverMessenger.getNodeConfig().getNodeIDs().size() < 2) {
+
+                log.log(Level.INFO, "request {0} is not write for {1}, calling parent", new Object[]{request, cql[0]});
+                super.handleMessageFromClient(bytes, header);
+                return;
             }
 
             synchronized (this) {
@@ -109,6 +118,7 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        this.checkMessageDelivery();
     }
 
     // TODO: process bytes received from servers here
@@ -156,7 +166,17 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                 else {
                     // log.log(Level.INFO, "SOMETHING WRONG! ACK/UPDATE NOT PARSED");
                 }
+            }
 
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        this.checkMessageDelivery();
+    }
+
+    private void checkMessageDelivery() {
+        try{
+            synchronized (this) {
                 /* HANDLE MESSAGE DELIVERY */
                 while (!this.queue.isEmpty()) {
                 // if (!this.queue.isEmpty()) {
@@ -176,7 +196,9 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                         this.session.execute(front_message_parts[0]);   // deliver message
 
                         this.queue.poll();  // remove message
-                        this.messages_acks.remove(front_message);
+                        if(this.messages_acks.containsKey(front_message)) {
+                            this.messages_acks.remove(front_message);
+                        }
 
                         // log.log(Level.INFO, "{0} delivers message {1}", new Object[]{this.myID, front_message});
 
@@ -196,7 +218,6 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                     }
                 }
             }
-
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -29,10 +29,10 @@ public class MyDBSingleServer extends SingleServer {
     }
 
     public void close() {
-        super.close();
-        // TODO: cleanly close anything you created here.
         session.close();
         cluster.close();
+        super.close();
+        // TODO: cleanly close anything you created here.
     }
 
     /**
@@ -58,18 +58,21 @@ public class MyDBSingleServer extends SingleServer {
                 }
             }
 
-            // indicates callback id not appended
-            if(message == "") {
-                // System.out.println("handleMessageFromClient executing string " + request);
-                this.session.execute(request);
-            }
-            // indicates request contains callback id, so use execute message with id removed
-            else {
-                // System.out.println("handleMessageFromClient executing string " + message);
-                this.session.execute(message);
-            }
+            synchronized (this) {
 
-            this.clientMessenger.send(header.sndr, bytes);  // echo message
+                // indicates callback id not appended
+                if(message == "") {
+                    System.out.println("handleMessageFromClient executing string " + request);
+                    this.session.execute(request);
+                }
+                // indicates request contains callback id, so use execute message with id removed
+                else {
+                    System.out.println("handleMessageFromClient executing string " + message);
+                    this.session.execute(message);
+                }
+
+                this.clientMessenger.send(header.sndr, bytes);  // echo message
+            }
 
         } catch (IOException e) {
             e.printStackTrace();
