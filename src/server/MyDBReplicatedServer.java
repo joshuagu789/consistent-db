@@ -35,6 +35,8 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
         return s1_parts[3].compareTo(s2_parts[3]);
     });
     private HashMap<String, NIOHeader> client_headers = new HashMap<String, NIOHeader>();   // address of client for server to reply to
+    private HashMap<String, Integer> client_headers_count = new HashMap<String, Integer>();   // address of client for server to reply to
+
     // private HashMap<String, byte[]> client_bytes = new HashMap<String, byte[]>();
 
     public MyDBReplicatedServer(NodeConfig<String> nodeConfig, String myID,
@@ -57,9 +59,13 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
         //         .myID, this.clientMessenger.getListeningSocketAddress()});
     }
 
+    @Override
     public void close() {
         this.serverMessenger.stop();
-        super.close();
+        session.close();
+        cluster.close();
+        this.clientMessenger.stop();
+        // super.close();
     }
 
     /**
@@ -100,7 +106,13 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
 
                 this.messages_acks.put(messageToBroadcast, 1);   // self ack
                 this.queue.add(messageToBroadcast);
-                this.client_headers.put(messageToBroadcast, header);
+                if(this.client_headers.containsKey(messageToBroadcast)) {
+                    this.client_headers_count.put(messageToBroadcast, this.client_headers_count.get(messageToBroadcast) + 1);
+                }
+                else {
+                    this.client_headers.put(messageToBroadcast, header);
+                    this.client_headers_count.put(messageToBroadcast, 1);
+                }
 
                 messageToBroadcast += "|UPDATE"; 
 
@@ -142,9 +154,7 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                     if(this.messages_acks.containsKey(message_key)) {
                         this.messages_acks.put(message_key, this.messages_acks.get(message_key) + 1);
                     }
-                    else {
-                        this.messages_acks.put(message_key, 1);
-                    }
+
                     // log.log(Level.INFO, "{0} ACKS message {1}, its ack count is now {2}", new Object[]{this.myID, message, this.messages_acks.get(message_key)});
                 }
                 else if(message_parts[5].equals("UPDATE")) {
@@ -207,7 +217,14 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
 
                             String response = front_message_parts[0] + "|" + front_message_parts[1];
                             NIOHeader client_header = this.client_headers.get(front_message);
-                            this.client_headers.remove(front_message);
+
+                            if(this.client_headers_count.get(front_message) > 1) {
+                                this.client_headers_count.put(front_message, this.client_headers_count.get(front_message) - 1);
+                            }
+                            else {
+                                this.client_headers.remove(front_message);
+                                this.client_headers_count.remove(front_message);
+                            }
 
                             // log.log(Level.INFO, "{0} sends message {1} to client {2}", new Object[]{this.myID, response, client_header.sndr});
                             this.clientMessenger.send(client_header.sndr, response.getBytes(ReplicatedServer.DEFAULT_ENCODING));  // echo message

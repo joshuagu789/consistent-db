@@ -18,20 +18,23 @@ import com.datastax.driver.core.Session;
  */
 public class MyDBSingleServer extends SingleServer {
 
-    protected static Cluster cluster;
-    protected static Session session;
-
+    protected Cluster cluster;
+    protected Session session;
+    
     public MyDBSingleServer(InetSocketAddress isa, InetSocketAddress isaDB,
                             String keyspace) throws IOException {
         super(isa, isaDB, keyspace);
 
-        session = (cluster = Cluster.builder().addContactPoint(isaDB.getHostName()).build()).connect(keyspace);
+        cluster = Cluster.builder().addContactPoint(isaDB.getHostName()).build();
+        session = cluster.connect(keyspace);
     }
 
+    @Override
     public void close() {
         session.close();
         cluster.close();
-        super.close();
+        this.clientMessenger.stop();
+        // super.close();
         // TODO: cleanly close anything you created here.
     }
 
@@ -49,27 +52,14 @@ public class MyDBSingleServer extends SingleServer {
 
             String message = "";
             String request = new String(bytes, SingleServer.DEFAULT_ENCODING);
-            // System.out.println("handleMessageFromClient received string " + request);
+            String[] request_parts = request.split("\\|");  // contains <cql command>|<callback_id> or just <cql command>
 
-            for(int i = request.length()-1; i >= 0; i--) {
-                if(request.charAt(i) == '|') {
-                    message = request.substring(0, i);
-                    break;
-                }
-            }
+            // System.out.println("handleMessageFromClient received string " + request);
 
             synchronized (this) {
 
-                // indicates callback id not appended
-                if(message == "") {
-                    System.out.println("handleMessageFromClient executing string " + request);
-                    this.session.execute(request);
-                }
-                // indicates request contains callback id, so use execute message with id removed
-                else {
-                    System.out.println("handleMessageFromClient executing string " + message);
-                    this.session.execute(message);
-                }
+                System.out.println("handleMessageFromClient executing string " + request_parts[0]);
+                this.session.execute(request_parts[0]);
 
                 this.clientMessenger.send(header.sndr, bytes);  // echo message
             }

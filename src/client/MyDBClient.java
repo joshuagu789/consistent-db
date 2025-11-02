@@ -95,7 +95,7 @@ public class MyDBClient extends Client {
                 this.callbacks.put(this.callback_id, callback);
             }
             payload = request + "|" + Long.toString(callback_id);   // append callback id with '|' delimiter
-            this.callback_id++;                                     // for convenience, always increment & send callback id even if no callback
+            this.callback_id = this.callback_id+1;                                     // for convenience, always increment & send callback id even if no callback
         }
         System.out.println("Sending callbacked string in callbackSend " + payload);
         this.send(isa, payload);
