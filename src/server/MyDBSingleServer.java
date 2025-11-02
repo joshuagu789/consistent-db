@@ -58,7 +58,7 @@ public class MyDBSingleServer extends SingleServer {
 
             synchronized (this) {
 
-                System.out.println("handleMessageFromClient executing string " + request_parts[0]);
+                // System.out.println("handleMessageFromClient executing string " + request_parts[0]);
                 this.session.execute(request_parts[0]);
 
                 this.clientMessenger.send(header.sndr, bytes);  // echo message

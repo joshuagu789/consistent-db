@@ -55,8 +55,8 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                                 return true;
                             }
                         }, true);
-        // log.log(Level.INFO, "Server {0} started on {1}", new Object[]{this
-        //         .myID, this.clientMessenger.getListeningSocketAddress()});
+        log.log(Level.INFO, "Server {0} started on {1}", new Object[]{this
+                .myID, this.clientMessenger.getListeningSocketAddress()});
     }
 
     @Override
@@ -82,10 +82,11 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
             String request = new String(bytes, SingleServer.DEFAULT_ENCODING);  // encoded as <command>|<callback_id>
             String clientSource = this.clientMessenger.getListeningSocketAddress().toString();
             String[] request_parts = request.split("\\|");
-
+                            
             if(request_parts.length == 1) { // indicates no encoding of callback
                 request += "|-1";   // MyDBClient.java does not use negative id's, basically a dummy id, ensures all message encodings are consistent
             }
+            log.log(Level.INFO, "{0} receives message {1} from client {2}", new Object[]{this.myID, request});
 
             String[] cql = request_parts[0].split(" ");
             if((!cql[0].equals("create") && !cql[0].equals("insert") && !cql[0].equals("update") && 
@@ -140,7 +141,7 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
         try {
             String message = new String(bytes, ReplicatedServer.DEFAULT_ENCODING);
             String[] message_parts = message.split("\\|");    // array len 6
-            // log.log(Level.INFO, "{0} received relayed message from {1}, message is {2}, array is {3}", new Object[]{this.myID, header.sndr, message, message_parts});
+            log.log(Level.INFO, "{0} received relayed message from {1}, message is {2}, array is {3}", new Object[]{this.myID, header.sndr, message, message_parts});
 
             // encoded as <command>|<callback_id>|<clientAddress>|<server_ID>|<server_lamport>
             final String message_key = message_parts[0] + "|" + message_parts[1] + "|" + message_parts[2] + "|" + message_parts[3] + "|" + message_parts[4];
@@ -155,13 +156,13 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                         this.messages_acks.put(message_key, this.messages_acks.get(message_key) + 1);
                     }
 
-                    // log.log(Level.INFO, "{0} ACKS message {1}, its ack count is now {2}", new Object[]{this.myID, message, this.messages_acks.get(message_key)});
+                    log.log(Level.INFO, "{0} ACKS message {1}, its ack count is now {2}", new Object[]{this.myID, message, this.messages_acks.get(message_key)});
                 }
                 else if(message_parts[5].equals("UPDATE")) {
                     this.messages_acks.put(message_key, 1); // self ack
 
                     String messageToBroadcast = message_key + "|ACK";
-                    // log.log(Level.INFO, "{0} multicasts message {1}", new Object[]{this.myID, messageToBroadcast});
+                    log.log(Level.INFO, "{0} multicasts message {1}", new Object[]{this.myID, messageToBroadcast});
 
                     /* BEGIN MULTICAST */
                     // relay to other servers
@@ -174,7 +175,7 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                             }
                 }
                 else {
-                    // log.log(Level.INFO, "SOMETHING WRONG! ACK/UPDATE NOT PARSED");
+                    log.log(Level.INFO, "SOMETHING WRONG! ACK/UPDATE NOT PARSED");
                 }
             }
 
@@ -210,7 +211,7 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                             this.messages_acks.remove(front_message);
                         }
 
-                        // log.log(Level.INFO, "{0} delivers message {1}", new Object[]{this.myID, front_message});
+                        log.log(Level.INFO, "{0} delivers message {1}", new Object[]{this.myID, front_message});
 
                         // If this server is responsible for replying to client
                         if(this.client_headers.containsKey(front_message)) {
@@ -226,7 +227,7 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                                 this.client_headers_count.remove(front_message);
                             }
 
-                            // log.log(Level.INFO, "{0} sends message {1} to client {2}", new Object[]{this.myID, response, client_header.sndr});
+                            log.log(Level.INFO, "{0} sends message {1} to client {2}", new Object[]{this.myID, response, client_header.sndr});
                             this.clientMessenger.send(client_header.sndr, response.getBytes(ReplicatedServer.DEFAULT_ENCODING));  // echo message
                         }
                     }
