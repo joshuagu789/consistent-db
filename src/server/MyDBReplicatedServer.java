@@ -78,26 +78,26 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
     protected void handleMessageFromClient(byte[] bytes, NIOHeader header) {
 
         try {
-            String request = new String(bytes, SingleServer.DEFAULT_ENCODING);  // encoded as <command>|<callback_id>
-            String clientSource = this.clientMessenger.getListeningSocketAddress().toString();
-            String[] request_parts = request.split("\\|");
-                            
-            if(request_parts.length == 1) { // indicates no encoding of callback
-                request += "|-1";   // MyDBClient.java does not use negative id's, basically a dummy id, ensures all message encodings are consistent
-            }
-            // log.log(Level.INFO, "{0} receives message {1} from client {2}", new Object[]{this.myID, request});
-
-            String[] cql = request_parts[0].split(" ");
-            /* CHECK FOR READ OPERATIONS */
-            if((!cql[0].equals("create") && !cql[0].equals("insert") && !cql[0].equals("update") && 
-                !cql[0].equals("drop") && !cql[0].equals("truncate")) || this.serverMessenger.getNodeConfig().getNodeIDs().size() < 2) {
-
-                // log.log(Level.INFO, "request {0} is not write for {1}, calling parent", new Object[]{request, cql[0]});
-                super.handleMessageFromClient(bytes, header);
-                return;
-            }
-
             synchronized (this) {
+                String request = new String(bytes, SingleServer.DEFAULT_ENCODING);  // encoded as <command>|<callback_id>
+                String clientSource = this.clientMessenger.getListeningSocketAddress().toString();
+                String[] request_parts = request.split("\\|");
+                                
+                if(request_parts.length == 1) { // indicates no encoding of callback
+                    request += "|-1";   // MyDBClient.java does not use negative id's, basically a dummy id, ensures all message encodings are consistent
+                }
+                // log.log(Level.INFO, "{0} receives message {1} from client {2}", new Object[]{this.myID, request});
+
+                String[] cql = request_parts[0].split(" ");
+                /* CHECK FOR READ OPERATIONS */
+                if((!cql[0].equals("create") && !cql[0].equals("insert") && !cql[0].equals("update") && 
+                    !cql[0].equals("drop") && !cql[0].equals("truncate")) || this.serverMessenger.getNodeConfig().getNodeIDs().size() < 2) {
+
+                    // log.log(Level.INFO, "request {0} is not write for {1}, calling parent", new Object[]{request, cql[0]});
+                    super.handleMessageFromClient(bytes, header);
+                    return;
+                }
+
                 // NOTE that hashmap messages_acks does not include <"UPDATE"|"ACK"> or sender lamport clock
 
                 /* INSERT INTO DATA STRUCTURES */
@@ -135,15 +135,14 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
         // log.log(Level.INFO, "{0} received relayed message from {1}", new Object[]{this.myID, header.sndr}); // simply log
 
         try {
-            String message = new String(bytes, ReplicatedServer.DEFAULT_ENCODING);
-            String[] message_parts = message.split("\\|");    // array len 6
-            // log.log(Level.INFO, "{0} received relayed message from {1}, message is {2}, array is {3}", new Object[]{this.myID, header.sndr, message, message_parts});
-
-            // encoded as <command>|<callback_id>|<clientAddress>|<server_ID>|<server_lamport>, ignore the <sender_lamport>|<"UPDATE"|"ACK"> at end
-            final String message_key = message_parts[0] + "|" + message_parts[1] + "|" + message_parts[2] + "|" + message_parts[3] + "|" + message_parts[4];
-            // log.log(Level.INFO, "message_parts len is {0}, message_key is {1}", new Object[]{message_parts.length, message_key});
-
             synchronized(this) {
+                String message = new String(bytes, ReplicatedServer.DEFAULT_ENCODING);
+                String[] message_parts = message.split("\\|");    // array len 6
+
+                // encoded as <command>|<callback_id>|<clientAddress>|<server_ID>|<server_lamport>, ignore the <sender_lamport>|<"UPDATE"|"ACK"> at end
+                final String message_key = message_parts[0] + "|" + message_parts[1] + "|" + message_parts[2] + "|" + message_parts[3] + "|" + message_parts[4];
+
+
                 long incoming_lamport_clock = Long.parseLong(message_parts[5]);
                 this.lamport_clock = Math.max(this.lamport_clock, incoming_lamport_clock) + 1;  // update LC
 
