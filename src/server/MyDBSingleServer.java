@@ -29,12 +29,10 @@ public class MyDBSingleServer extends SingleServer {
         session = cluster.connect(keyspace);
     }
 
-    @Override
     public void close() {
         session.close();
         cluster.close();
-        this.clientMessenger.stop();
-        // super.close();
+        super.close();
         // TODO: cleanly close anything you created here.
     }
 
