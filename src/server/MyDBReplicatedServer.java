@@ -198,12 +198,12 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                 else {
                     // log.log(Level.INFO, "SOMETHING WRONG! ACK/UPDATE NOT PARSED");
                 }
+                this.checkMessageDelivery();
             }
 
         } catch (IOException e) {
             e.printStackTrace();
         }
-        this.checkMessageDelivery();
     }
 
     private void checkMessageDelivery() {
