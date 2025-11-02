@@ -19,7 +19,7 @@ import java.util.LinkedList;
 public class MyDBReplicatedServer extends MyDBSingleServer {
 
     protected final String myID;
-    protected final long myID_long;
+    // protected final long myID_long;
     protected final MessageNIOTransport<String,String> serverMessenger;
 
     private long lamport_clock = 0;
@@ -33,7 +33,8 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
         if(!s1_parts[4].equals(s2_parts[4])) {
             return Long.compare(Long.parseLong(s1_parts[4]), Long.parseLong(s2_parts[4]));
         }
-        return Long.compare(Long.parseLong(s1_parts[3]), Long.parseLong(s2_parts[3]));
+        // return Long.compare(Long.parseLong(s1_parts[3]), Long.parseLong(s2_parts[3]));
+        return s1_parts[3].compareTo(s2_parts[3]);
     });
 
     private HashMap<String, NIOHeader> client_headers = new HashMap<String, NIOHeader>();   // address of client for server to reply to
@@ -47,16 +48,16 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                         .SERVER_PORT_OFFSET), isaDB, myID);
         this.myID = myID;
 
-        long temp = 0;
-        long multiplier = 1;
-        for(char c: myID.toCharArray()) {
-            if(Character.isDigit(c)) {
-                temp = temp * multiplier;
-                temp += c - '0';
-                multiplier = multiplier * 10;
-            }
-        }
-        this.myID_long = temp;
+        // long temp = 0;
+        // long multiplier = 1;
+        // for(char c: myID.toCharArray()) {
+        //     if(Character.isDigit(c)) {
+        //         temp = temp * multiplier;
+        //         temp += c - '0';
+        //         multiplier = multiplier * 10;
+        //     }
+        // }
+        // this.myID_long = temp;
 
         this.serverMessenger = new
                 MessageNIOTransport<String, String>(myID, nodeConfig,
@@ -69,7 +70,7 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                             }
                         }, true);
         log.log(Level.INFO, "Server {0} with long id {1} started on {2}", new Object[]{this
-                .myID, this.myID_long, this.clientMessenger.getListeningSocketAddress()});
+                .myID, this.myID, this.clientMessenger.getListeningSocketAddress()});
     }
 
     public void close() {
@@ -112,7 +113,7 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
 
                 /* INSERT INTO DATA STRUCTURES */
                 this.lamport_clock++;
-                String messageToBroadcast = request + "|" + clientSource + "|" + this.myID_long + "|" + this.lamport_clock;
+                String messageToBroadcast = request + "|" + clientSource + "|" + this.myID + "|" + this.lamport_clock;
 
                 if(this.client_headers.containsKey(messageToBroadcast)) {
                     this.client_headers_count.put(messageToBroadcast, this.client_headers_count.get(messageToBroadcast) + 1);
@@ -179,7 +180,8 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                         if(!s1_parts[4].equals(s2_parts[4])) {
                             return Long.compare(Long.parseLong(s1_parts[4]), Long.parseLong(s2_parts[4]));
                         }
-                        return Long.compare(Long.parseLong(s1_parts[3]), Long.parseLong(s2_parts[3]));
+                        // return Long.compare(Long.parseLong(s1_parts[3]), Long.parseLong(s2_parts[3]));
+                        return s1_parts[3].compareTo(s2_parts[3]);
                     });
                     for(String s: temp2) {
                         contents += s + "\n";
