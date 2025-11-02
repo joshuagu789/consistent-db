@@ -11,7 +11,7 @@ import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.PriorityQueue;
 import java.util.logging.Level;
-
+import java.util.LinkedList;
 /**
  * This class should implement your replicated database server. Refer to
  * {@link ReplicatedServer} for a starting point.
@@ -19,11 +19,12 @@ import java.util.logging.Level;
 public class MyDBReplicatedServer extends MyDBSingleServer {
 
     protected final String myID;
+    protected final long myID_long;
     protected final MessageNIOTransport<String,String> serverMessenger;
 
     private long lamport_clock = 0;
 
-    // encoded as <command>|<callback_id>|<clientAddress>|<server_ID>|<server_lamport>
+    // encoded as <command>|<callback_id>|<clientAddress>|<server_ID>|<message_lamport>
     private HashMap<String, Integer> messages_acks = new HashMap<String, Integer>(); 
     private PriorityQueue<String> queue = new PriorityQueue<>((s1, s2) -> {
         String[] s1_parts = s1.split("\\|");
@@ -34,6 +35,7 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
         }
         return s1_parts[3].compareTo(s2_parts[3]);
     });
+    // private LinkedList<String> queue = new LinkedList<String>();
     private HashMap<String, NIOHeader> client_headers = new HashMap<String, NIOHeader>();   // address of client for server to reply to
     private HashMap<String, Integer> client_headers_count = new HashMap<String, Integer>();   // address of client for server to reply to
 
@@ -45,6 +47,18 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                 nodeConfig.getNodePort(myID)-ReplicatedServer
                         .SERVER_PORT_OFFSET), isaDB, myID);
         this.myID = myID;
+
+        long temp = 0;
+        long multiplier = 1;
+        for(char c: myID.toCharArray()) {
+            if(Character.isDigit(c)) {
+                temp = temp * multiplier;
+                temp += c - '0';
+                multiplier = multiplier * 10;
+            }
+        }
+        this.myID_long = temp;
+
         this.serverMessenger = new
                 MessageNIOTransport<String, String>(myID, nodeConfig,
                 new
@@ -55,8 +69,8 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                                 return true;
                             }
                         }, true);
-        log.log(Level.INFO, "Server {0} started on {1}", new Object[]{this
-                .myID, this.clientMessenger.getListeningSocketAddress()});
+        log.log(Level.INFO, "Server {0} with long id {1} started on {2}", new Object[]{this
+                .myID, this.myID_long, this.clientMessenger.getListeningSocketAddress()});
     }
 
     @Override
@@ -105,8 +119,8 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                 this.lamport_clock++;
                 String messageToBroadcast = request + "|" + clientSource + "|" + this.myID + "|" + this.lamport_clock;
 
-                this.messages_acks.put(messageToBroadcast, 1);   // self ack
-                this.queue.add(messageToBroadcast);
+                // this.messages_acks.put(messageToBroadcast, 1);   // self ack
+                // this.queue.add(messageToBroadcast);
                 if(this.client_headers.containsKey(messageToBroadcast)) {
                     this.client_headers_count.put(messageToBroadcast, this.client_headers_count.get(messageToBroadcast) + 1);
                 }
@@ -115,12 +129,12 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                     this.client_headers_count.put(messageToBroadcast, 1);
                 }
 
-                messageToBroadcast += "|UPDATE"; 
+                messageToBroadcast += "|" + this.lamport_clock + "|UPDATE"; 
 
                 /* BEGIN MULTICAST */
                 // relay to other servers
                 for (String node : this.serverMessenger.getNodeConfig().getNodeIDs())
-                    if (!node.equals(myID))
+                    // if (!node.equals(myID))
                         try {
                             this.serverMessenger.send(node, messageToBroadcast.getBytes(ReplicatedServer.DEFAULT_ENCODING));
                         } catch (IOException e) {
@@ -131,7 +145,6 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        this.checkMessageDelivery();
     }
 
     // TODO: process bytes received from servers here
@@ -141,33 +154,57 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
         try {
             String message = new String(bytes, ReplicatedServer.DEFAULT_ENCODING);
             String[] message_parts = message.split("\\|");    // array len 6
-            log.log(Level.INFO, "{0} received relayed message from {1}, message is {2}, array is {3}", new Object[]{this.myID, header.sndr, message, message_parts});
+            // log.log(Level.INFO, "{0} received relayed message from {1}, message is {2}, array is {3}", new Object[]{this.myID, header.sndr, message, message_parts});
 
-            // encoded as <command>|<callback_id>|<clientAddress>|<server_ID>|<server_lamport>
+            // encoded as <command>|<callback_id>|<clientAddress>|<server_ID>|<server_lamport>, ignore the <sender_lamport>|<"UPDATE"|"ACK"> at end
             final String message_key = message_parts[0] + "|" + message_parts[1] + "|" + message_parts[2] + "|" + message_parts[3] + "|" + message_parts[4];
             // log.log(Level.INFO, "message_parts len is {0}, message_key is {1}", new Object[]{message_parts.length, message_key});
 
             synchronized(this) {
-                long incoming_lamport_clock = Long.parseLong(message_parts[4]);
+                long incoming_lamport_clock = Long.parseLong(message_parts[5]);
                 this.lamport_clock = Math.max(this.lamport_clock, incoming_lamport_clock) + 1;  // update LC
 
-                if(message_parts[5].equals("ACK")) {
+                if(message_parts[6].equals("ACK")) {
                     if(this.messages_acks.containsKey(message_key)) {
                         this.messages_acks.put(message_key, this.messages_acks.get(message_key) + 1);
                     }
+                    else {
+                        this.messages_acks.put(message_key, 1);
+                    }
 
-                    log.log(Level.INFO, "{0} ACKS message {1}, its ack count is now {2}", new Object[]{this.myID, message, this.messages_acks.get(message_key)});
+                    String contents = "";
+                    PriorityQueue<String> temp = new PriorityQueue<String>(this.queue);
+                    LinkedList<String> temp2 = new LinkedList<String>();
+                    while(!temp.isEmpty()){
+                        // contents += temp.poll() + "\n";
+                        temp2.add(temp.poll());
+                    }
+                    temp2.sort((s1, s2) -> {
+                        String[] s1_parts = s1.split("\\|");
+                        String[] s2_parts = s2.split("\\|");
+
+                        if(s1_parts[4] != s2_parts[4]) {
+                            return Long.compare(Long.parseLong(s1_parts[4]), Long.parseLong(s2_parts[4]));
+                        }
+                        return s1_parts[3].compareTo(s2_parts[3]);
+                    });
+                    for(String s: temp2) {
+                        contents += s + "\n";
+                    }
+                    log.log(Level.INFO, "{0} ACKS message key {1}, its ack count is now {2}, the contents of queue is {3}", new Object[]{this.myID, message_key, this.messages_acks.get(message_key), contents});
                 }
-                else if(message_parts[5].equals("UPDATE")) {
-                    this.messages_acks.put(message_key, 1); // self ack
+                else if(message_parts[6].equals("UPDATE")) {
+                    // this.messages_acks.put(message_key, 1); // self ack
+                    this.queue.add(message_key);
 
-                    String messageToBroadcast = message_key + "|ACK";
-                    log.log(Level.INFO, "{0} multicasts message {1}", new Object[]{this.myID, messageToBroadcast});
+                    this.lamport_clock = this.lamport_clock + 1;
+                    String messageToBroadcast = message_key + "|" + this.lamport_clock + "|ACK";    // append |<sender_lamport>|ACK
+                    log.log(Level.INFO, "{0} multicasts message {1}, head of queue is {2}", new Object[]{this.myID, messageToBroadcast, this.queue.peek()});
 
                     /* BEGIN MULTICAST */
                     // relay to other servers
                     for (String node : this.serverMessenger.getNodeConfig().getNodeIDs())
-                        if (!node.equals(myID))
+                        // if (!node.equals(myID))
                             try {
                                 this.serverMessenger.send(node, messageToBroadcast.getBytes(ReplicatedServer.DEFAULT_ENCODING));
                             } catch (IOException e) {
@@ -194,12 +231,15 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
 
                     String front_message = this.queue.peek();
 
-                    if(!this.messages_acks.containsKey(front_message)) {
-                        this.queue.poll();
-                        continue;
+                    if(!this.messages_acks.containsKey(front_message)) {    // means not ready yet
+                        // log.log(Level.INFO, "hashmap does not contain key {0}, removing from head of queue", new Object[]{front_message});
+                        // this.queue.poll();
+                        // continue;
+                        return;
                     }
 
                     int acks = this.messages_acks.get(front_message);
+                    boolean started_TOM = this.client_headers.containsKey(front_message);
 
                     if(acks >= this.serverMessenger.getNodeConfig().getNodeIDs().size()) {  // Enough acks, lets goooo!!
                         String[] front_message_parts = front_message.split("\\|");
@@ -214,7 +254,7 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                         log.log(Level.INFO, "{0} delivers message {1}", new Object[]{this.myID, front_message});
 
                         // If this server is responsible for replying to client
-                        if(this.client_headers.containsKey(front_message)) {
+                        if(started_TOM) {
 
                             String response = front_message_parts[0] + "|" + front_message_parts[1];
                             NIOHeader client_header = this.client_headers.get(front_message);
