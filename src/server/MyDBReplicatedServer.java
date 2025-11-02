@@ -154,27 +154,27 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                         this.messages_acks.put(message_key, 1);
                     }
 
-                    // String contents = "";
-                    // PriorityQueue<String> temp = new PriorityQueue<String>(this.queue);
-                    // LinkedList<String> temp2 = new LinkedList<String>();
-                    // while(!temp.isEmpty()){
-                    //     // contents += temp.poll() + "\n";
-                    //     temp2.add(temp.poll());
-                    // }
-                    // temp2.sort((s1, s2) -> {
-                    //     String[] s1_parts = s1.split("\\|");
-                    //     String[] s2_parts = s2.split("\\|");
+                    String contents = "";
+                    PriorityQueue<String> temp = new PriorityQueue<String>(this.queue);
+                    LinkedList<String> temp2 = new LinkedList<String>();
+                    while(!temp.isEmpty()){
+                        // contents += temp.poll() + "\n";
+                        temp2.add(temp.poll());
+                    }
+                    temp2.sort((s1, s2) -> {
+                        String[] s1_parts = s1.split("\\|");
+                        String[] s2_parts = s2.split("\\|");
 
-                    //     if(!s1_parts[4].equals(s2_parts[4])) {
-                    //         return Long.compare(Long.parseLong(s1_parts[4]), Long.parseLong(s2_parts[4]));
-                    //     }
-                    //     // return Long.compare(Long.parseLong(s1_parts[3]), Long.parseLong(s2_parts[3]));
-                    //     return s1_parts[3].compareTo(s2_parts[3]);
-                    // });
-                    // for(String s: temp2) {
-                    //     contents += s + "\n";
-                    // }                    
-                    // log.log(Level.INFO, "{0} ACKS message key {1}, its ack count is now {2}, the contents of queue is {3}", new Object[]{this.myID, message_key, this.messages_acks.get(message_key), contents});
+                        if(!s1_parts[4].equals(s2_parts[4])) {
+                            return Long.compare(Long.parseLong(s1_parts[4]), Long.parseLong(s2_parts[4]));
+                        }
+                        // return Long.compare(Long.parseLong(s1_parts[3]), Long.parseLong(s2_parts[3]));
+                        return s1_parts[3].compareTo(s2_parts[3]);
+                    });
+                    for(String s: temp2) {
+                        contents += s + "\n";
+                    }                    
+                    log.log(Level.INFO, "{0} ACKS message key {1}, its ack count is now {2}, the contents of queue is {3}", new Object[]{this.myID, message_key, this.messages_acks.get(message_key), contents});
                     // log.log(Level.INFO, "{0} ACKS message key {1}, its ack count is now {2}", new Object[]{this.myID, message_key, this.messages_acks.get(message_key)});
                 }
                 else if(message_parts[6].equals("UPDATE")) {
