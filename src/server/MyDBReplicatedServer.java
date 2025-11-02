@@ -68,8 +68,8 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                                 return true;
                             }
                         }, true);
-        // log.log(Level.INFO, "Server {0} with long id {1} started on {2}", new Object[]{this
-        //         .myID, this.myID_long, this.clientMessenger.getListeningSocketAddress()});
+        log.log(Level.INFO, "Server {0} with long id {1} started on {2}", new Object[]{this
+                .myID, this.myID_long, this.clientMessenger.getListeningSocketAddress()});
     }
 
     public void close() {
@@ -95,7 +95,7 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
             if(request_parts.length == 1) { // indicates no encoding of callback
                 request += "|-1";   // MyDBClient.java does not use negative id's, basically a dummy id, ensures all message encodings are consistent
             }
-            // log.log(Level.INFO, "{0} receives message {1} from client {2}", new Object[]{this.myID, request});
+            log.log(Level.INFO, "{0} receives message {1} from client {2}", new Object[]{this.myID, request});
 
             String[] cql = request_parts[0].split(" ");
             /* CHECK FOR READ OPERATIONS */
@@ -165,7 +165,26 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                         this.messages_acks.put(message_key, 1);
                     }
 
-                    // log.log(Level.INFO, "{0} ACKS message key {1}, its ack count is now {2}, the contents of queue is {3}", new Object[]{this.myID, message_key, this.messages_acks.get(message_key), contents});
+                    String contents = "";
+                    PriorityQueue<String> temp = new PriorityQueue<String>(this.queue);
+                    LinkedList<String> temp2 = new LinkedList<String>();
+                    while(!temp.isEmpty()){
+                        // contents += temp.poll() + "\n";
+                        temp2.add(temp.poll());
+                    }
+                    temp2.sort((s1, s2) -> {
+                        String[] s1_parts = s1.split("\\|");
+                        String[] s2_parts = s2.split("\\|");
+
+                        if(!s1_parts[4].equals(s2_parts[4])) {
+                            return Long.compare(Long.parseLong(s1_parts[4]), Long.parseLong(s2_parts[4]));
+                        }
+                        return Long.compare(Long.parseLong(s1_parts[3]), Long.parseLong(s2_parts[3]));
+                    });
+                    for(String s: temp2) {
+                        contents += s + "\n";
+                    }                    
+                    log.log(Level.INFO, "{0} ACKS message key {1}, its ack count is now {2}, the contents of queue is {3}", new Object[]{this.myID, message_key, this.messages_acks.get(message_key), contents});
                 }
                 else if(message_parts[6].equals("UPDATE")) {
 
@@ -173,7 +192,7 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
 
                     this.lamport_clock = this.lamport_clock + 1;
                     String messageToBroadcast = message_key + "|" + this.lamport_clock + "|ACK";    // append |<sender_lamport>|ACK
-                    // log.log(Level.INFO, "{0} multicasts message {1}, head of queue is {2}", new Object[]{this.myID, messageToBroadcast, this.queue.peek()});
+                    log.log(Level.INFO, "{0} multicasts message {1}, head of queue is {2}", new Object[]{this.myID, messageToBroadcast, this.queue.peek()});
 
                     /* BEGIN MULTICAST */
                     // multicast ACK to all servers including itself
@@ -186,7 +205,7 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                     }
                 }
                 else {
-                    // log.log(Level.INFO, "SOMETHING WRONG! ACK/UPDATE NOT PARSED");
+                    log.log(Level.INFO, "SOMETHING WRONG! ACK/UPDATE NOT PARSED");
                 }
             }
 
@@ -221,7 +240,7 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                             this.messages_acks.remove(front_message);
                         }
 
-                        // log.log(Level.INFO, "{0} delivers message {1}", new Object[]{this.myID, front_message});
+                        log.log(Level.INFO, "{0} delivers message {1}", new Object[]{this.myID, front_message});
 
                         // If this server is responsible for replying to client
                         if(started_TOM) {
@@ -237,7 +256,7 @@ public class MyDBReplicatedServer extends MyDBSingleServer {
                                 this.client_headers_count.remove(front_message);
                             }
 
-                            // log.log(Level.INFO, "{0} sends message {1} to client {2}", new Object[]{this.myID, response, client_header.sndr});
+                            log.log(Level.INFO, "{0} sends message {1} to client {2}", new Object[]{this.myID, response, client_header.sndr});
                             this.clientMessenger.send(client_header.sndr, response.getBytes(ReplicatedServer.DEFAULT_ENCODING));  // echo message
                         }
                     }
